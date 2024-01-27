@@ -63,19 +63,19 @@ impl Value {
     }
 }
 
-impl ops::Add for Value {
+impl ops::Add for &Value {
     type Output = Value;
 
-    fn add(mut self, mut rhs: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Self::Output {
         let op = AddOperation::new(self.clone(), rhs.clone());
         Value::new_op(self.0.borrow().value + rhs.0.borrow().value, op)
     }
 }
 
-impl ops::Mul for Value {
+impl ops::Mul for &Value {
     type Output = Value;
 
-    fn mul(mut self, mut rhs: Self) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self::Output {
         let op = MulOperation::new(self.clone(), rhs.clone());
         Value::new_op(self.0.borrow().value * rhs.0.borrow().value, op)
     }
@@ -89,9 +89,9 @@ mod tests {
     fn sum() {
         let a = Value::new(2.0);
         let b =  Value::new(3.0);
-        let x = a.clone() + b.clone();
+        let x = &a + &b;
         let y = a.clone();
-        let z = x.clone() + y.clone();
+        let z = &x + &y;
         // z = (a + b) + a
         z.0.borrow_mut().grad = 1.0;
         z.back();
@@ -103,8 +103,8 @@ mod tests {
     #[test]
     fn mul() {
         let a = Value::new(5.0);
-        let x = a.clone() * a.clone();
-        let y = x.clone() * a.clone();
+        let x = &a * &a;
+        let y = &x * &a;
         y.0.borrow_mut().grad = 1.0;
         y.back();
         assert_eq!(x.grad(), 5.0);
@@ -117,10 +117,10 @@ mod tests {
     fn internal_loop() {
         let a = Value::new(2.0);
         let b = Value::new(1.0);
-        let x = a.clone() * b.clone();
-        let y = x.clone() + a.clone();
-        let w = x.clone() + b.clone();
-        let mut z = y.clone() * w.clone();
+        let x = &a * &b;
+        let y = &x + &a;
+        let w = &x + &b;
+        let mut z = &y * &w;
         z.0.borrow_mut().grad = 1.0;
         z.back();
         w.back();
@@ -135,10 +135,10 @@ mod tests {
     fn backprop() {
         let a = Value::new(2.0);
         let b = Value::new(1.0);
-        let x = a.clone() * b.clone();
-        let y = x.clone() + a.clone();
-        let w = x.clone() + b.clone();
-        let mut z = y.clone() * w.clone();
+        let x = &a * &b;
+        let y = &x + &a;
+        let w = &x + &b;
+        let mut z = &y * &w;
         z.backprop();
         assert_eq!(a.grad(), 10.0);
     }
