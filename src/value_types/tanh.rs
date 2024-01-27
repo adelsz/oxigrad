@@ -31,6 +31,10 @@ impl DynamicValue for TanhValue {
         a.add_grad(grad * (1.0 - self.value().powi(2)));
     }
 
+    fn reset_grad(&self) {
+        *self.grad.borrow_mut() = 0.0;
+    }
+
     fn add_grad(&self, grad: f32) {
         *self.grad.borrow_mut() += grad;
     }

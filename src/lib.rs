@@ -16,6 +16,7 @@ pub trait DynamicValue {
     fn grad(&self) -> f32;
     fn back(&self);
     fn add_grad(&self, grad: f32);
+    fn reset_grad(&self);
     fn node(&self) -> Vec<Value>;
 }
 struct Value(Rc<dyn DynamicValue>);
@@ -50,6 +51,20 @@ fn backprop(val: &Value) {
         for p in node.node() {
             if visited.insert(&*p.0 as *const dyn DynamicValue) {
                 p.back();
+                queue.push(p.clone());
+            }
+        }
+    }
+}
+
+fn reset(val: &Value) {
+    val.reset_grad();
+    let mut queue = vec![val.clone()];
+    let mut visited = HashSet::new();
+    while let Some(ref node) = queue.pop() {
+        for p in node.node() {
+            if visited.insert(&*p.0 as *const dyn DynamicValue) {
+                p.reset_grad();
                 queue.push(p.clone());
             }
         }

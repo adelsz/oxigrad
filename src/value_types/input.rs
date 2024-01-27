@@ -27,6 +27,10 @@ impl DynamicValue for InputValue {
         *self.grad.borrow_mut() += grad;
     }
 
+    fn reset_grad(&self) {
+        *self.grad.borrow_mut() = 0.0;
+    }
+
     fn grad(&self) -> f32 {
         *self.grad.borrow()
     }

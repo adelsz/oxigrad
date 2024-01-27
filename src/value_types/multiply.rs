@@ -43,6 +43,10 @@ impl DynamicValue for MulValue {
         b.add_grad(grad * a.value());
     }
 
+    fn reset_grad(&self) {
+        *self.grad.borrow_mut() = 0.0;
+    }
+
     fn node(&self) -> Vec<Value> {
         let mut operands = self.operands.borrow();
         let (a, b) = operands.deref();
