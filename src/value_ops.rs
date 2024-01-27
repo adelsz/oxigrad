@@ -1,17 +1,19 @@
+use std::rc::Rc;
 use crate::Value;
 
-trait ValueOp {
+pub trait ValueOp {
     fn value(&self) -> f32;
     fn back(&self, grad: f32);
+    fn node(&self) -> Vec<Value>;
 }
 
-struct AddOperation {
+pub struct AddOperation {
     a: Value,
     b: Value,
 }
 
 impl AddOperation {
-    fn new(a: Value, b: Value) -> Self {
+    pub fn new(a: Value, b: Value) -> Self {
         Self { a, b }
     }
 }
@@ -24,15 +26,18 @@ impl ValueOp for AddOperation {
         self.a.0.borrow_mut().grad += grad;
         self.b.0.borrow_mut().grad += grad;
     }
+    fn node(&self) -> Vec<Value> {
+        vec![self.a.clone(), self.b.clone()]
+    }
 }
 
-struct MulOperation {
+pub struct MulOperation {
     a: Value,
     b: Value,
 }
 
 impl MulOperation {
-    fn new(a: Value, b: Value) -> Self {
+    pub fn new(a: Value, b: Value) -> Self {
         Self { a, b }
     }
 }
@@ -42,26 +47,35 @@ impl ValueOp for MulOperation {
         self.a.value() * self.b.value()
     }
     fn back(&self, grad: f32) {
+        if Rc::ptr_eq(&self.a.0, &self.b.0) {
+            self.a.0.borrow_mut().grad += grad * 2.0 * self.a.value();
+            return;
+        }
         self.a.0.borrow_mut().grad += grad * self.b.value();
         self.b.0.borrow_mut().grad += grad * self.a.value();
     }
-}
-
-struct IdOperation {
-    a: Value,
-}
-
-impl IdOperation {
-    fn new(a: Value) -> Self {
-        Self { a }
+    fn node(&self) -> Vec<Value> {
+        vec![self.a.clone(), self.b.clone()]
     }
 }
 
-impl ValueOp for IdOperation {
+pub(crate) struct NoneOperation {
+}
+
+impl NoneOperation {
+    pub(crate) fn new() -> Self {
+        Self { }
+    }
+}
+
+impl ValueOp for NoneOperation {
     fn value(&self) -> f32 {
-        self.a.value()
+        panic!("None operation has no value and should not be called")
     }
     fn back(&self, grad: f32) {
+    }
+    fn node(&self) -> Vec<Value> {
+        vec![]
     }
 }
 
@@ -81,5 +95,8 @@ impl ValueOp for ExpOperation {
     }
     fn back(&self, grad: f32) {
         self.a.0.borrow_mut().grad += grad * self.value();
+    }
+    fn node(&self) -> Vec<Value> {
+        vec![self.a.clone()]
     }
 }

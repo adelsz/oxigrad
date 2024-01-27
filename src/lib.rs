@@ -1,15 +1,16 @@
 mod value_ops;
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use std::ops;
 use std::ops::Deref;
 use std::rc::Rc;
+use crate::value_ops::{AddOperation, MulOperation, ValueOp};
 
 struct InnerValue {
     value: f32,
     grad: f32,
-    op: Operation,
+    op: Box<dyn ValueOp>,
 }
 
 struct Value(Rc<RefCell<InnerValue>>);
@@ -20,26 +21,19 @@ impl Clone for Value {
     }
 }
 
-#[derive(Clone)]
-enum Operation {
-    None,
-    Add(Value, Value),
-    Mul(Value, Value),
-}
-
 impl Value {
     fn new(value: f32) -> Self {
         Self(Rc::new(RefCell::new(InnerValue {
             value,
             grad: 0.0,
-            op: Operation::None,
+            op: Box::new(value_ops::NoneOperation::new()),
         })))
     }
-    fn new_op(value: f32, op: Operation) -> Self {
+    fn new_op<A: ValueOp + 'static>(value: f32, op: A) -> Self {
         Self(Rc::new(RefCell::new(InnerValue {
             value,
             grad: 0.0,
-            op,
+            op: Box::new(op),
         })))
     }
     fn value(&self) -> f32 {
@@ -54,44 +48,18 @@ impl Value {
         let mut queue = vec![self.clone()];
         let mut visited = HashSet::new();
         while let Some(ref node) = queue.pop() {
-            let op = node.0.borrow().op.clone();
-            match op {
-                Operation::Add(ref a, ref b) | Operation::Mul(ref a, ref b) => {
-                    if visited.insert(&*a.0 as *const RefCell<InnerValue>) {
-                        a.back();
-                        queue.push(a.clone());
-                    }
-                    if visited.insert(&*b.0 as *const RefCell<InnerValue>) {
-                        b.back();
-                        queue.push(b.clone());
-                    }
+            let op = node.0.borrow();
+            for p in op.op.node() {
+                if visited.insert(&*p.0 as *const RefCell<InnerValue>) {
+                    p.back();
+                    queue.push(p.clone());
                 }
-                _ => {}
             }
         }
     }
     fn back(&self) {
-        let mut op = self.0.borrow_mut();
-        if let Operation::None = op.op {
-            return;
-        }
-        let grad = op.grad;
-        match op.op {
-            Operation::Add(ref a, ref b) => {
-                a.0.borrow_mut().grad += grad;
-                b.0.borrow_mut().grad += grad;
-            }
-            Operation::Mul(ref a, ref b) => {
-                if Rc::ptr_eq(&a.0, &b.0) {
-                    let value = a.0.borrow().value;
-                    a.0.borrow_mut().grad += 2.0*grad * value;
-                } else {
-                    a.0.borrow_mut().grad += grad * b.0.borrow().value;
-                    b.0.borrow_mut().grad += grad * a.0.borrow().value;
-                }
-            }
-            Operation::None => {}
-        }
+        let grad = self.0.borrow().grad;
+        self.0.borrow_mut().op.back(grad);
     }
 }
 
@@ -99,7 +67,8 @@ impl ops::Add for Value {
     type Output = Value;
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
-        Value::new_op(self.0.borrow().value + rhs.0.borrow().value, Operation::Add(self.clone(), rhs.clone()))
+        let op = AddOperation::new(self.clone(), rhs.clone());
+        Value::new_op(self.0.borrow().value + rhs.0.borrow().value, op)
     }
 }
 
@@ -107,7 +76,8 @@ impl ops::Mul for Value {
     type Output = Value;
 
     fn mul(mut self, mut rhs: Self) -> Self::Output {
-        Value::new_op(self.0.borrow().value * rhs.0.borrow().value, Operation::Mul(self.clone(), rhs.clone()))
+        let op = MulOperation::new(self.clone(), rhs.clone());
+        Value::new_op(self.0.borrow().value * rhs.0.borrow().value, op)
     }
 }
 
@@ -137,6 +107,8 @@ mod tests {
         let y = x.clone() * a.clone();
         y.0.borrow_mut().grad = 1.0;
         y.back();
+        assert_eq!(x.grad(), 5.0);
+        assert_eq!(a.grad(), 25.0);
         x.back();
         assert_eq!(a.grad(), 75.0);
     }
