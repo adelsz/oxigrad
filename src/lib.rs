@@ -1,19 +1,32 @@
-mod value_ops;
-
-use std::cell::RefCell;
-use std::collections::{HashSet};
-use std::ops;
-use std::ops::Deref;
+use std::collections::HashSet;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
-use crate::value_ops::{AddOperation, MulOperation, ValueOp};
+use crate::value_types::input::InputValue;
 
-struct InnerValue {
-    value: f32,
-    grad: f32,
-    op: Box<dyn ValueOp>,
+mod value_types {
+    pub mod add;
+    pub mod multiply;
+    pub mod input;
+    pub mod tanh;
 }
 
-struct Value(Rc<RefCell<InnerValue>>);
+
+pub trait DynamicValue {
+    fn value(&self) -> f32;
+    fn grad(&self) -> f32;
+    fn back(&self);
+    fn add_grad(&self, grad: f32);
+    fn node(&self) -> Vec<Value>;
+}
+struct Value(Rc<dyn DynamicValue>);
+
+impl Deref for Value {
+    type Target = Rc<dyn DynamicValue>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl Clone for Value {
     fn clone(&self) -> Self {
@@ -23,94 +36,43 @@ impl Clone for Value {
 
 impl Value {
     fn new(value: f32) -> Self {
-        Self(Rc::new(RefCell::new(InnerValue {
-            value,
-            grad: 0.0,
-            op: Box::new(value_ops::NoneOperation::new()),
-        })))
+        Self(Rc::new(InputValue::new(value)))
     }
-    fn new_op<A: ValueOp + 'static>(value: f32, op: A) -> Self {
-        Self(Rc::new(RefCell::new(InnerValue {
-            value,
-            grad: 0.0,
-            op: Box::new(op),
-        })))
-    }
-    fn value(&self) -> f32 {
-        self.0.borrow().value
-    }
-    fn grad(&self) -> f32 {
-        self.0.borrow().grad
-    }
-    fn backprop(&mut self) {
-        self.0.borrow_mut().grad = 1.0;
-        self.back();
-        let mut queue = vec![self.clone()];
-        let mut visited = HashSet::new();
-        while let Some(ref node) = queue.pop() {
-            let op = node.0.borrow();
-            for p in op.op.node() {
-                if visited.insert(&*p.0 as *const RefCell<InnerValue>) {
-                    p.back();
-                    queue.push(p.clone());
-                }
+}
+
+
+fn backprop(val: &Value) {
+    val.add_grad(1.0);
+    val.back();
+    let mut queue = vec![val.clone()];
+    let mut visited = HashSet::new();
+    while let Some(ref node) = queue.pop() {
+        for p in node.node() {
+            if visited.insert(&*p.0 as *const dyn DynamicValue) {
+                p.back();
+                queue.push(p.clone());
             }
         }
-    }
-    fn back(&self) {
-        let grad = self.0.borrow().grad;
-        self.0.borrow_mut().op.back(grad);
-    }
-}
-
-impl ops::Add for &Value {
-    type Output = Value;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let op = AddOperation::new(self.clone(), rhs.clone());
-        Value::new_op(self.0.borrow().value + rhs.0.borrow().value, op)
-    }
-}
-
-impl ops::Mul for &Value {
-    type Output = Value;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        let op = MulOperation::new(self.clone(), rhs.clone());
-        Value::new_op(self.0.borrow().value * rhs.0.borrow().value, op)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::value_types::tanh::{tanh};
     use super::*;
 
     #[test]
-    fn sum() {
-        let a = Value::new(2.0);
-        let b =  Value::new(3.0);
-        let x = &a + &b;
-        let y = a.clone();
-        let z = &x + &y;
-        // z = (a + b) + a
-        z.0.borrow_mut().grad = 1.0;
-        z.back();
-        y.back();
-        x.back();
-        assert_eq!(a.grad(), 2.0);
-    }
-
-    #[test]
     fn mul() {
-        let a = Value::new(5.0);
-        let x = &a * &a;
-        let y = &x * &a;
-        y.0.borrow_mut().grad = 1.0;
-        y.back();
-        assert_eq!(x.grad(), 5.0);
-        assert_eq!(a.grad(), 25.0);
-        x.back();
-        assert_eq!(a.grad(), 75.0);
+        let a = Value::new(2.0);
+        let b = Value::new(3.0);
+        let c = &a * &b;
+        assert_eq!(c.value(), 6.0);
+        let d = &c * &a;
+        assert_eq!(d.value(), 12.0);
+        d.add_grad(1.0);
+        d.back();
+        c.back();
+        assert_eq!(a.grad(), 12.0);
     }
 
     #[test]
@@ -120,8 +82,8 @@ mod tests {
         let x = &a * &b;
         let y = &x + &a;
         let w = &x + &b;
-        let mut z = &y * &w;
-        z.0.borrow_mut().grad = 1.0;
+        let z = &y * &w;
+        z.add_grad(1.0);
         z.back();
         w.back();
         y.back();
@@ -132,14 +94,25 @@ mod tests {
     }
 
     #[test]
-    fn backprop() {
+    fn backprop_test() {
         let a = Value::new(2.0);
         let b = Value::new(1.0);
         let x = &a * &b;
         let y = &x + &a;
         let w = &x + &b;
-        let mut z = &y * &w;
-        z.backprop();
+        let z = &y * &w;
+        backprop(&z);
+        // z = (a * b + a) * (a * b + b) = a^2 * b^2 + a^2 * b + a * b^2 + a * b
+        // dz/da = 2ab^2 + 2ab + b^2 + b = 2*2*1 + 2*2 + 1 + 1 = 10
         assert_eq!(a.grad(), 10.0);
+    }
+
+    #[test]
+    fn tanh_test() {
+        let a = Value::new(2.0);
+        let v = tanh(&a);
+        assert_eq!(v.value(), 0.9640276);
+        backprop(&v);
+        assert_eq!(a.grad(), 0.070650816);
     }
 }
