@@ -1,38 +1,38 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use crate::{DynamicValue, Value};
 
 pub struct InputValue {
-    value: RefCell<f32>,
-    grad: RefCell<f32>,
+    value: Cell<f32>,
+    grad: Cell<f32>,
 }
 
 impl InputValue {
     pub fn new(value: f32) -> Self {
-        Self { value: RefCell::new(value), grad: RefCell::new(0.0) }
+        Self { value: Cell::new(value), grad: Cell::new(0.0) }
     }
     fn set_value(&self, value: f32) {
-        *self.value.borrow_mut() = value;
+        self.value.set(value);
     }
 
 }
 
 impl DynamicValue for InputValue {
     fn value(&self) -> f32 {
-        *self.value.borrow()
+        self.value.get()
     }
 
     fn back(&self) { }
 
+    fn grad(&self) -> f32 {
+        self.grad.get()
+    }
+
     fn add_grad(&self, grad: f32) {
-        *self.grad.borrow_mut() += grad;
+        self.grad.set(self.grad.get() + grad);
     }
 
     fn reset_grad(&self) {
-        *self.grad.borrow_mut() = 0.0;
-    }
-
-    fn grad(&self) -> f32 {
-        *self.grad.borrow()
+        self.grad.set(0.0)
     }
 
     fn node(&self) -> Vec<Value> {

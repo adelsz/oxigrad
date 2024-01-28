@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ops;
 use crate::{DynamicValue, Value};
 use std::ops::{Deref, DerefMut};
@@ -6,8 +6,8 @@ use std::rc::Rc;
 
 pub struct AddValue {
     operands: RefCell<(Value, Value)>,
-    grad: RefCell<f32>,
-    value: RefCell<f32>,
+    grad: Cell<f32>,
+    value: Cell<f32>,
 }
 
 impl ops::Add for &Value {
@@ -20,7 +20,7 @@ impl ops::Add for &Value {
 
 impl AddValue {
     pub fn new(a: Value, b: Value) -> Self {
-        Self { operands: RefCell::new((a.clone(), b.clone())), grad: RefCell::new(0.0), value: RefCell::new(a.value() + b.value())}
+        Self { operands: RefCell::new((a.clone(), b.clone())), grad: Cell::new(0.0), value: Cell::new(a.value() + b.value())}
     }
 }
 
@@ -32,15 +32,15 @@ impl DynamicValue for AddValue {
     }
 
     fn grad(&self) -> f32 {
-        *self.grad.borrow()
+        self.grad.get()
     }
 
     fn add_grad(&self, grad: f32) {
-        *self.grad.borrow_mut() += grad;
+        self.grad.set(self.grad.get() + grad);
     }
 
     fn back(&self) {
-        let grad = self.grad.borrow().clone();
+        let grad = self.grad.get();
         let mut operands = self.operands.borrow_mut();
         let (a, b) = operands.deref_mut();
         a.add_grad(grad);
@@ -48,7 +48,7 @@ impl DynamicValue for AddValue {
     }
 
     fn reset_grad(&self) {
-        *self.grad.borrow_mut() = 0.0;
+        self.grad.set(0.0)
     }
 
     fn node(&self) -> Vec<Value> {
