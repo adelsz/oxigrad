@@ -31,24 +31,18 @@ impl DynamicValue for AddValue {
         a.value() + b.value()
     }
 
-    fn grad(&self) -> f32 {
-        self.grad.get()
-    }
-
-    fn add_grad(&self, grad: f32) {
-        self.grad.set(self.grad.get() + grad);
+    fn grad(&self) -> &Cell<f32> {
+        &self.grad
     }
 
     fn back(&self) {
         let grad = self.grad.get();
         let mut operands = self.operands.borrow_mut();
         let (a, b) = operands.deref_mut();
-        a.add_grad(grad);
-        b.add_grad(grad);
-    }
-
-    fn reset_grad(&self) {
-        self.grad.set(0.0)
+        let a_grad = a.grad();
+        let b_grad = b.grad();
+        a_grad.set(a_grad.get() + grad);
+        b_grad.set(b_grad.get() + grad);
     }
 
     fn node(&self) -> Vec<Value> {

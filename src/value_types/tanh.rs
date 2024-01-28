@@ -20,23 +20,15 @@ impl DynamicValue for TanhValue {
        self.value.get()
     }
 
-    fn grad(&self) -> f32 {
-        self.grad.get()
+    fn grad(&self) -> &Cell<f32> {
+        &self.grad
     }
 
     fn back(&self) {
         let grad = self.grad.get();
         let mut operand = self.operand.borrow_mut();
         let a = operand.deref_mut();
-        a.add_grad(grad * (1.0 - self.value().powi(2)));
-    }
-
-    fn reset_grad(&self) {
-        self.grad.set(0.0)
-    }
-
-    fn add_grad(&self, grad: f32) {
-        self.grad.set(self.grad.get() + grad);
+        a.grad().set(grad * (1.0 - self.value().powi(2)));
     }
 
     fn node(&self) -> Vec<Value> {

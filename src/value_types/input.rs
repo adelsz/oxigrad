@@ -23,16 +23,8 @@ impl DynamicValue for InputValue {
 
     fn back(&self) { }
 
-    fn grad(&self) -> f32 {
-        self.grad.get()
-    }
-
-    fn add_grad(&self, grad: f32) {
-        self.grad.set(self.grad.get() + grad);
-    }
-
-    fn reset_grad(&self) {
-        self.grad.set(0.0)
+    fn grad(&self) -> &Cell<f32> {
+        &self.grad
     }
 
     fn node(&self) -> Vec<Value> {

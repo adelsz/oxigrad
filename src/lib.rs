@@ -1,5 +1,6 @@
 mod neuron;
 
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
@@ -15,10 +16,8 @@ mod value_types {
 
 pub trait DynamicValue {
     fn value(&self) -> f32;
-    fn grad(&self) -> f32;
+    fn grad(&self) -> &Cell<f32>;
     fn back(&self);
-    fn add_grad(&self, grad: f32);
-    fn reset_grad(&self);
     fn node(&self) -> Vec<Value>;
 }
 struct Value(Rc<dyn DynamicValue>);
@@ -45,7 +44,7 @@ impl Value {
 
 
 fn backprop(val: &Value) {
-    val.add_grad(1.0);
+    val.grad().set(1.0);
     val.back();
     let mut queue = vec![val.clone()];
     let mut visited = HashSet::new();
@@ -60,13 +59,13 @@ fn backprop(val: &Value) {
 }
 
 fn reset(val: &Value) {
-    val.reset_grad();
+    val.grad().set(0.0);
     let mut queue = vec![val.clone()];
     let mut visited = HashSet::new();
     while let Some(ref node) = queue.pop() {
         for p in node.node() {
             if visited.insert(&*p.0 as *const dyn DynamicValue) {
-                p.reset_grad();
+                p.grad().set(0.0);
                 queue.push(p.clone());
             }
         }
@@ -86,10 +85,10 @@ mod tests {
         assert_eq!(c.value(), 6.0);
         let d = &c * &a;
         assert_eq!(d.value(), 12.0);
-        d.add_grad(1.0);
+        d.grad().set(1.0);
         d.back();
         c.back();
-        assert_eq!(a.grad(), 12.0);
+        assert_eq!(a.grad().get(), 12.0);
     }
 
     #[test]
@@ -100,14 +99,14 @@ mod tests {
         let y = &x + &a;
         let w = &x + &b;
         let z = &y * &w;
-        z.add_grad(1.0);
+        z.grad().set(1.0);
         z.back();
         w.back();
         y.back();
         x.back();
         // z = (a * b + a) * (a * b + b) = a^2 * b^2 + a^2 * b + a * b^2 + a * b
         // dz/da = 2ab^2 + 2ab + b^2 + b = 2*2*1 + 2*2 + 1 + 1 = 10
-        assert_eq!(a.grad(), 10.0);
+        assert_eq!(a.grad().get(), 10.0);
     }
 
     #[test]
@@ -121,7 +120,7 @@ mod tests {
         backprop(&z);
         // z = (a * b + a) * (a * b + b) = a^2 * b^2 + a^2 * b + a * b^2 + a * b
         // dz/da = 2ab^2 + 2ab + b^2 + b = 2*2*1 + 2*2 + 1 + 1 = 10
-        assert_eq!(a.grad(), 10.0);
+        assert_eq!(a.grad().get(), 10.0);
     }
 
     #[test]
@@ -130,6 +129,6 @@ mod tests {
         let v = tanh(&a);
         assert_eq!(v.value(), 0.9640276);
         backprop(&v);
-        assert_eq!(a.grad(), 0.070650816);
+        assert_eq!(a.grad().get(), 0.070650816);
     }
 }

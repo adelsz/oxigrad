@@ -23,28 +23,22 @@ impl DynamicValue for MulValue {
         a.value() * b.value()
     }
 
-    fn grad(&self) -> f32 {
-        self.grad.get()
-    }
-
-    fn add_grad(&self, grad: f32) {
-        self.grad.set(self.grad.get() + grad);
+    fn grad(&self) -> &Cell<f32> {
+        &self.grad
     }
 
     fn back(&self) {
         let grad = self.grad.get();
         let mut operands = self.operands.borrow_mut();
         let (a, b) = operands.deref_mut();
+        let a_grad = a.grad();
+        let b_grad = b.grad();
         if Rc::ptr_eq(&a.0, &b.0) {
-            a.add_grad(grad * 2.0 * a.value());
+            a_grad.set(a_grad.get() + grad * 2.0 * a.value());
             return;
         }
-        a.add_grad(grad * b.value());
-        b.add_grad(grad * a.value());
-    }
-
-    fn reset_grad(&self) {
-        self.grad.set(0.0)
+        a_grad.set(a_grad.get() + grad * b.value());
+        b_grad.set(b_grad.get() + grad * a.value());
     }
 
     fn node(&self) -> Vec<Value> {
