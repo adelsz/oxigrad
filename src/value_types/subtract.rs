@@ -10,17 +10,17 @@ pub struct AddValue {
     value: Cell<f32>,
 }
 
-impl ops::Add for &Value {
+impl ops::Sub for &Value {
     type Output = Value;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self::Output {
         Value(Rc::new(AddValue::new(self.clone(), rhs.clone())))
     }
 }
 
 impl AddValue {
     pub fn new(a: Value, b: Value) -> Self {
-        Self { operands: RefCell::new((a.clone(), b.clone())), grad: Cell::new(0.0), value: Cell::new(a.value() + b.value())}
+        Self { operands: RefCell::new((a.clone(), b.clone())), grad: Cell::new(0.0), value: Cell::new(a.value() - b.value())}
     }
 }
 

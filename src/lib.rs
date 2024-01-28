@@ -8,6 +8,7 @@ use crate::value_types::input::InputValue;
 
 mod value_types {
     pub mod add;
+    pub mod subtract;
     pub mod multiply;
     pub mod input;
     pub mod tanh;

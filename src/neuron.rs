@@ -17,16 +17,25 @@ fn new_neuron(inputs: &[&Value], activation: fn(&Value) -> Value) -> Neuron {
 
 #[cfg(test)]
 mod tests {
-    use crate::Value;
+    use rand::distributions::Distribution;
+    use rand::SeedableRng;
+    use crate::{backprop, Value};
     use crate::value_types::input::InputValue;
     use crate::value_types::tanh::tanh;
     use super::{Neuron, new_neuron};
 
     fn gen_test_data() -> Vec<(f32, f32, bool)> {
-        let rng = rand::thread_rng();
-
-        todo!()
-
+        let mut rng = rand::rngs::StdRng::seed_from_u64(1234);
+        let dist = rand::distributions::Uniform::new(-1.0, 1.0);
+        let sample_count = 10000;
+        let mut result = Vec::with_capacity(sample_count);
+        for _ in 0..sample_count {
+            let x = dist.sample(&mut rng);
+            let y = dist.sample(&mut rng);
+            let value = (x, y, x*x + y*y < 0.8);
+            result.push(value);
+        }
+        result
     }
 
     #[test]
@@ -38,6 +47,29 @@ mod tests {
         let n2 = new_neuron(&inputs, tanh);
         let n3 = new_neuron(&inputs, tanh);
         let output = new_neuron(&[&n1.output, &n2.output, &n3.output], tanh);
+
+        let expected = Value::new(0.0);
+        let loss = &(&output.output - &expected) * &(&output.output - &expected);
+
+        let mut test_data = gen_test_data();
+        let mut epoch = 0;
+        let batch_size = 100;
+
+        todo!();
+        for batch in test_data.chunks(batch_size) {
+            // epoch += 1;
+            // let mut error = 0.0;
+            // for (xv, yv, expectedv) in batch {
+            //     x.value().set(*x);
+            //     y.value().set(*y);
+            //     expected.value().set(if *expectedv { 1.0 } else { 0.0 });
+            //
+            //     forward(loss);
+            //     backprop(loss);
+            // }
+            // println!("Epoch: {}, Error: {}", epoch, error);
+        }
+
     }
 }
 
