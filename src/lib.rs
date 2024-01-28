@@ -17,9 +17,10 @@ mod value_types {
 
 pub trait DynamicValue {
     fn value(&self) -> f32;
+    fn forward(&self);
     fn grad(&self) -> &Cell<f32>;
     fn back(&self);
-    fn node(&self) -> Vec<Value>;
+    fn dependencies(&self) -> Vec<Value>;
 }
 struct Value(Rc<dyn DynamicValue>);
 
@@ -43,14 +44,13 @@ impl Value {
     }
 }
 
-
 fn backprop(val: &Value) {
     val.grad().set(1.0);
     val.back();
     let mut queue = vec![val.clone()];
     let mut visited = HashSet::new();
     while let Some(ref node) = queue.pop() {
-        for p in node.node() {
+        for p in node.dependencies() {
             if visited.insert(&*p.0 as *const dyn DynamicValue) {
                 p.back();
                 queue.push(p.clone());
@@ -64,7 +64,7 @@ fn reset(val: &Value) {
     let mut queue = vec![val.clone()];
     let mut visited = HashSet::new();
     while let Some(ref node) = queue.pop() {
-        for p in node.node() {
+        for p in node.dependencies() {
             if visited.insert(&*p.0 as *const dyn DynamicValue) {
                 p.grad().set(0.0);
                 queue.push(p.clone());

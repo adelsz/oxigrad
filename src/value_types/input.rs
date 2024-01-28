@@ -21,13 +21,16 @@ impl DynamicValue for InputValue {
         self.value.get()
     }
 
+    fn forward(&self) {
+    }
+
     fn back(&self) { }
 
     fn grad(&self) -> &Cell<f32> {
         &self.grad
     }
 
-    fn node(&self) -> Vec<Value> {
+    fn dependencies(&self) -> Vec<Value> {
         vec![]
     }
 }

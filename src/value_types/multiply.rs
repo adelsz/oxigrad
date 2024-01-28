@@ -18,9 +18,14 @@ impl MulValue {
 
 impl DynamicValue for MulValue {
     fn value(&self) -> f32 {
+        self.value.get()
+    }
+    fn forward(&self)  {
         let operands = self.operands.borrow();
         let (a, b) = operands.deref();
-        a.value() * b.value()
+        a.forward();
+        b.forward();
+        self.value.set(a.value() * b.value());
     }
 
     fn grad(&self) -> &Cell<f32> {
@@ -41,7 +46,7 @@ impl DynamicValue for MulValue {
         b_grad.set(b_grad.get() + grad * a.value());
     }
 
-    fn node(&self) -> Vec<Value> {
+    fn dependencies(&self) -> Vec<Value> {
         let mut operands = self.operands.borrow();
         let (a, b) = operands.deref();
         vec![a.clone(), b.clone()]

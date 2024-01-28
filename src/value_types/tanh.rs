@@ -20,6 +20,12 @@ impl DynamicValue for TanhValue {
        self.value.get()
     }
 
+    fn forward(&self) {
+        let operand = self.operand.borrow();
+        operand.forward();
+        self.value.set(operand.value().tanh());
+    }
+
     fn grad(&self) -> &Cell<f32> {
         &self.grad
     }
@@ -31,7 +37,7 @@ impl DynamicValue for TanhValue {
         a.grad().set(grad * (1.0 - self.value().powi(2)));
     }
 
-    fn node(&self) -> Vec<Value> {
+    fn dependencies(&self) -> Vec<Value> {
         let operand = self.operand.borrow();
         vec![operand.clone()]
     }

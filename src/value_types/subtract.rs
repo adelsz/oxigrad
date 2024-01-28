@@ -29,6 +29,14 @@ impl DynamicValue for AddValue {
         self.value.get()
     }
 
+    fn forward(&self) {
+        let operands = self.operands.borrow();
+        let (a, b) = operands.deref();
+        a.forward();
+        b.forward();
+        self.value.set(a.value() - b.value());
+    }
+
     fn grad(&self) -> &Cell<f32> {
         &self.grad
     }
@@ -43,7 +51,7 @@ impl DynamicValue for AddValue {
         b_grad.set(b_grad.get() + grad);
     }
 
-    fn node(&self) -> Vec<Value> {
+    fn dependencies(&self) -> Vec<Value> {
         let mut operands = self.operands.borrow();
         let (a, b) = operands.deref();
         vec![a.clone(), b.clone()]

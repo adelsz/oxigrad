@@ -55,20 +55,20 @@ mod tests {
         let mut epoch = 0;
         let batch_size = 100;
 
-        todo!();
-        for batch in test_data.chunks(batch_size) {
-            // epoch += 1;
-            // let mut error = 0.0;
-            // for (xv, yv, expectedv) in batch {
-            //     x.value().set(*x);
-            //     y.value().set(*y);
-            //     expected.value().set(if *expectedv { 1.0 } else { 0.0 });
-            //
-            //     forward(loss);
-            //     backprop(loss);
-            // }
-            // println!("Epoch: {}, Error: {}", epoch, error);
-        }
+        // for batch in test_data.chunks(batch_size) {
+        //     epoch += 1;
+        //     let mut error = 0.0;
+        //     for (xv, yv, expectedv) in batch {
+        //         x.value().set(*x);
+        //         y.value().set(*y);
+        //         expected.value().set(if *expectedv { 1.0 } else { 0.0 });
+        //
+        //         loss.forward();
+        //         forward(loss);
+        //         backprop(loss);
+        //     }
+        //     println!("Epoch: {}, Error: {}", epoch, error);
+        // }
 
     }
 }
