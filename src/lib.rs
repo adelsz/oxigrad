@@ -1,3 +1,5 @@
+mod neuron;
+
 use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
