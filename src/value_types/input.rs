@@ -21,6 +21,10 @@ impl DynamicValue for InputValue {
         self.value.get()
     }
 
+    fn set_value(&self, value: f32) {
+        self.value.set(value);
+    }
+
     fn forward(&self) {
     }
 

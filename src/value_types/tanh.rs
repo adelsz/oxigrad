@@ -19,6 +19,9 @@ impl DynamicValue for TanhValue {
     fn value(&self) -> f32 {
        self.value.get()
     }
+    fn set_value(&self, value: f32) {
+        panic!("Cannot set value of a dynamic node")
+    }
 
     fn forward(&self) {
         let operand = self.operand.borrow();
@@ -34,7 +37,8 @@ impl DynamicValue for TanhValue {
         let grad = self.grad.get();
         let mut operand = self.operand.borrow_mut();
         let a = operand.deref_mut();
-        a.grad().set(grad * (1.0 - self.value().powi(2)));
+        let new_value = 1.0 - a.value().tanh().powi(2);
+        a.grad().set(a.grad().get() + grad*(new_value));
     }
 
     fn dependencies(&self) -> Vec<Value> {

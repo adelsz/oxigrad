@@ -20,6 +20,9 @@ impl DynamicValue for MulValue {
     fn value(&self) -> f32 {
         self.value.get()
     }
+    fn set_value(&self, value: f32) {
+        panic!("Cannot set value of a dynamic node")
+    }
     fn forward(&self)  {
         let operands = self.operands.borrow();
         let (a, b) = operands.deref();

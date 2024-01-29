@@ -28,6 +28,9 @@ impl DynamicValue for AddValue {
     fn value(&self) -> f32 {
         self.value.get()
     }
+    fn set_value(&self, value: f32) {
+        panic!("Cannot set value of a dynamic node")
+    }
 
     fn forward(&self) {
         let operands = self.operands.borrow();
@@ -48,7 +51,7 @@ impl DynamicValue for AddValue {
         let a_grad = a.grad();
         let b_grad = b.grad();
         a_grad.set(a_grad.get() + grad);
-        b_grad.set(b_grad.get() + grad);
+        b_grad.set(b_grad.get() - grad);
     }
 
     fn dependencies(&self) -> Vec<Value> {
