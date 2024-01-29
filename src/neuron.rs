@@ -19,6 +19,9 @@ fn new_neuron<R: SeedableRng + RngCore>(inputs: &[&Value], activation: fn(&Value
 #[cfg(test)]
 mod tests {
     use std::iter::once;
+    use plotly::common::{ColorScale, ColorScalePalette, Dim, Marker, Mode};
+    use plotly::{Layout, Plot, Scatter};
+    use plotly::color::Rgb;
     use rand::distributions::{Distribution, Standard};
     use rand::{Rng, SeedableRng};
     use rand::prelude::StdRng;
@@ -41,27 +44,35 @@ mod tests {
     }
 
 
-    fn simple_scatter_plot(show: bool) {
+    fn simple_scatter_plot(title: &str, data: &[(f32, f32, f32)]) {
         let n: usize = 100;
-        let t: Vec<f64> = linspace(0., 10., n).collect();
-        let y = t.iter().map(|x| x.sin()).collect();
+        let t = data.iter().map(|x| x.0).collect();
+        let y = data.iter().map(|x| x.1).collect();
+        let colors = data.iter().map(|x| Rgb::new(150+(100.0* x.2) as u8, 10, 10)).collect();
 
-        let trace = Scatter::new(t, y).mode(Mode::Markers);
+        let trace = Scatter::new(t, y).mode(Mode::Markers)
+        .marker(
+            Marker::new().color_array(colors)
+        );
         let mut plot = Plot::new();
+        let layout = Layout::new()
+            .auto_size(false).width(1200).height(1200)
+            .title(title.into());
+        plot.set_layout(layout);
         plot.add_trace(trace);
         plot.show();
         // println!("{}", plot.to_inline_html(Some("simple_scatter_plot")));
     }
 
 
-    fn gen_test_data(sample_count: usize) -> Vec<(f32, f32, bool)> {
+    fn gen_data(sample_count: usize) -> Vec<(f32, f32, f32)> {
         let mut rng = rand::rngs::StdRng::seed_from_u64(1234);
         let dist = rand::distributions::Uniform::new(-1.0, 1.0);
         let mut result = Vec::with_capacity(sample_count);
         for _ in 0..sample_count {
             let x = dist.sample(&mut rng);
             let y = dist.sample(&mut rng);
-            let value = (x, y, x*x + y*y < 0.8);
+            let value = (x, y, if x*x + y*y < 0.6 { 1.0 } else { -1.0 });
             result.push(value);
         }
         result
@@ -125,8 +136,10 @@ mod tests {
         let outputs = hidden_layer.iter().map(|n| &n.output).collect::<Vec<_>>();
         let output = new_neuron(&outputs, tanh, &mut rng);
 
-        let training_data = gen_test_data(5000);
-        let test_data = gen_test_data(5000);
+        let mut data = gen_data(10000);
+        let (training_data, test_data) = data.split_at_mut(1000);
+
+        simple_scatter_plot("Training data", &training_data);
 
         let mut epoch = 0;
         let batch_size = 10;
@@ -144,7 +157,7 @@ mod tests {
 
         let mut loss = &output.output - &expected;
         loss = &loss * &loss;
-        let epoch_count = 200;
+        let epoch_count = 10;
 
         for _ in 0..epoch_count {
             let mut error = 0.0;
@@ -154,8 +167,7 @@ mod tests {
                 for (i, (xv, yv, expectedv)) in batch.iter().enumerate() {
                     x.set_value(*xv);
                     y.set_value(*yv);
-                    let expectedv = (if *expectedv { 1.0 } else { -1.0 });
-                    expected.set_value(expectedv);
+                    expected.set_value(*expectedv);
 
                     loss.forward();
                     error += loss.value();
@@ -172,12 +184,14 @@ mod tests {
             }
             println!("epoch: {}, error: {}", epoch, error / training_data.len() as f32);
         }
-        // for (xv, yv, exp) in &test_data[0..1000] {
-        //     x.set_value(*xv);
-        //     y.set_value(*yv);
-        //     expected.set_value(if *exp { 1.0 } else { -1.0 });
-        //     output.output.forward();
-        //     println!("{},{},{}", xv, yv, output.output.value());
-        // }
+
+        for (xv, yv, exp) in test_data.iter_mut() {
+            x.set_value(*xv);
+            y.set_value(*yv);
+            expected.set_value(*exp);
+            output.output.forward();
+            *exp = if output.output.value() > 0.0 { 1.0 } else { -1.0 };
+        }
+        simple_scatter_plot("Prediction", test_data);
     }
 }
