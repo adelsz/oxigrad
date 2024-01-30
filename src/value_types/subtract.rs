@@ -28,7 +28,7 @@ impl DynamicValue for AddValue {
     fn value(&self) -> f32 {
         self.value.get()
     }
-    fn set_value(&self, value: f32) {
+    fn set_value(&self, _: f32) {
         panic!("Cannot set value of a dynamic node")
     }
 
@@ -55,7 +55,7 @@ impl DynamicValue for AddValue {
     }
 
     fn dependencies(&self) -> Vec<Value> {
-        let mut operands = self.operands.borrow();
+        let operands = self.operands.borrow();
         let (a, b) = operands.deref();
         vec![a.clone(), b.clone()]
     }

@@ -19,7 +19,7 @@ impl DynamicValue for TanhValue {
     fn value(&self) -> f32 {
        self.value.get()
     }
-    fn set_value(&self, value: f32) {
+    fn set_value(&self, _: f32) {
         panic!("Cannot set value of a dynamic node")
     }
 

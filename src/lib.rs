@@ -2,7 +2,7 @@ mod neuron;
 
 use std::cell::Cell;
 use std::collections::HashSet;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref};
 use std::rc::Rc;
 use crate::value_types::input::InputValue;
 
@@ -15,7 +15,7 @@ mod value_types {
 }
 
 
-pub trait DynamicValue {
+pub(crate) trait DynamicValue {
     fn value(&self) -> f32;
     fn set_value(&self, value: f32);
     fn forward(&self);
