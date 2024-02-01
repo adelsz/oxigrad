@@ -15,7 +15,7 @@ mod value_types {
 }
 
 
-pub(crate) trait DynamicValue {
+pub trait DynamicValue {
     fn value(&self) -> f32;
     fn set_value(&self, value: f32);
     fn forward(&self);
@@ -23,7 +23,7 @@ pub(crate) trait DynamicValue {
     fn back(&self);
     fn dependencies(&self) -> Vec<Value>;
 }
-struct Value(Rc<dyn DynamicValue>);
+pub struct Value(Rc<dyn DynamicValue>);
 
 impl Deref for Value {
     type Target = Rc<dyn DynamicValue>;
@@ -40,12 +40,12 @@ impl Clone for Value {
 }
 
 impl Value {
-    fn new(value: f32) -> Self {
+    pub fn new(value: f32) -> Self {
         Self(Rc::new(InputValue::new(value)))
     }
 }
 
-fn backprop(val: &Value) {
+pub fn backprop(val: &Value) {
     val.grad().set(1.0);
     val.back();
     let mut queue = vec![val.clone()];
@@ -60,7 +60,7 @@ fn backprop(val: &Value) {
     }
 }
 
-fn reset(val: &Value) {
+pub fn reset(val: &Value) {
     val.grad().set(0.0);
     let mut queue = vec![val.clone()];
     let mut visited = HashSet::new();

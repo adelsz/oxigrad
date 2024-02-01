@@ -1,13 +1,13 @@
 use rand::{Rng, RngCore, SeedableRng};
 use crate::Value;
 
-struct Neuron {
+pub struct Neuron {
     weights: Vec<Value>,
     bias: Value,
     output: Value,
 }
 
-fn new_neuron<R: SeedableRng + RngCore>(inputs: &[&Value], activation: fn(&Value) -> Value, rng: &mut R) -> Neuron {
+pub fn new_neuron<R: SeedableRng + RngCore>(inputs: &[&Value], activation: fn(&Value) -> Value, rng: &mut R) -> Neuron {
     let weights: Vec<_> = inputs.iter().map(|_| Value::new(rng.gen_range(-1.0..1.0))).collect();
     let bias = Value::new(rng.gen_range(-1.0..1.0));
     let result_value = weights.iter().zip(inputs.iter()).fold(bias.clone(), |ref acc, (w, i)| acc + &(w * i));
