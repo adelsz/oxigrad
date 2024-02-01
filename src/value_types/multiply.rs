@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::ops;
 use std::rc::Rc;
 use std::cell::{Cell, RefCell};
@@ -56,10 +57,18 @@ impl DynamicValue for MulValue {
     }
 }
 
-impl ops::Mul for &Value {
+impl <X: Borrow<Value>> ops::Mul<X> for &Value {
     type Output = Value;
 
-    fn mul(self, rhs: Self) -> Self::Output {
-        Value(Rc::new(MulValue::new(self.clone(), rhs.clone())))
+    fn mul(self, rhs: X) -> Self::Output {
+        Value(Rc::new(MulValue::new(self.clone(), rhs.borrow().clone())))
+    }
+}
+
+impl <X: Borrow<Value>> ops::Mul<X> for Value {
+    type Output = Value;
+
+    fn mul(self, rhs: X) -> Self::Output {
+        &self * rhs.borrow()
     }
 }

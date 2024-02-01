@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::ops;
 use crate::{DynamicValue, Value};
@@ -10,11 +11,19 @@ pub struct AddValue {
     value: Cell<f32>,
 }
 
-impl ops::Sub for &Value {
+impl <X: Borrow<Value>> ops::Sub<X> for &Value {
     type Output = Value;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        Value(Rc::new(AddValue::new(self.clone(), rhs.clone())))
+    fn sub(self, rhs: X) -> Self::Output {
+        Value(Rc::new(AddValue::new(self.clone(), rhs.borrow().clone())))
+    }
+}
+
+impl <X: Borrow<Value>> ops::Sub<X> for Value {
+    type Output = Value;
+
+    fn sub(self, rhs: X) -> Self::Output {
+        &self - rhs.borrow()
     }
 }
 

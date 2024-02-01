@@ -115,13 +115,13 @@ mod tests {
     fn backprop_test() {
         let a = Value::new(2.0);
         let b = Value::new(1.0);
-        let x = &a * &b;
-        let y = &x + &a;
-        let w = &x + &b;
-        let z = &y * &w;
-        backprop(&z);
+
         // z = (a * b + a) * (a * b + b) = a^2 * b^2 + a^2 * b + a * b^2 + a * b
+        let z = (&a * &b + &a) * (&a * &b + &b);
+
+        backprop(&z);
         // dz/da = 2ab^2 + 2ab + b^2 + b = 2*2*1 + 2*2 + 1 + 1 = 10
+
         assert_eq!(a.grad().get(), 10.0);
     }
 
@@ -129,10 +129,7 @@ mod tests {
     fn forward_test() {
         let a = Value::new(2.0);
         let b = Value::new(1.0);
-        let x = &a * &b;
-        let y = &x + &a;
-        let w = &x + &b;
-        let z = &y * &w;
+        let z = (&a * &b + &a) * (&a * &b + &b);
         assert_eq!(z.value(), 12.0);
         a.set_value(1.0);
         z.forward();
