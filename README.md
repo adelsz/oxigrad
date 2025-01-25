@@ -24,6 +24,6 @@ API is focused on ease of use and educational clarity, performance was not a pri
 
 ## Basic neural network training
 
-There is a basic neural network training example in `src/neuron.rs` and plots the training progress in a GIF file.
+There is a basic NN training example in `src/neuron.rs` that also saves a training progress visualization in a GIF file.
 
 <img src="./test.gif" width=600>
